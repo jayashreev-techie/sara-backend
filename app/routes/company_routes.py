@@ -11,7 +11,7 @@ from app.auth import create_access_token, get_current_company
 from app.models import Company
 from app.schemas import CompanyLoginRequest, CompanyLoginResponse
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__truncate_error=False)
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 router = APIRouter(prefix="/api/company", tags=["Company"])
 

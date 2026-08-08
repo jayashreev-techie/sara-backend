@@ -15,7 +15,7 @@ from app.schemas import (
     CompanyCreateRequest, CompanyUpdateRequest, CompanyResponse,
 )
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__truncate_error=False)
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 router = APIRouter(prefix="/api/super-admin", tags=["Super Admin"])
 

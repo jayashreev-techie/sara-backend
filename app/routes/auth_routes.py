@@ -19,7 +19,7 @@ from app.models import MobileUser, Job, User
 from app.utils.otp import create_and_send_otp, verify_otp
 from app.auth import create_access_token, get_current_mobile
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__truncate_error=False)
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
 
