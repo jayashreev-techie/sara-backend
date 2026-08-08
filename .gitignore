@@ -27,3 +27,5 @@ uploads/recee/*
 # OS
 .DS_Store
 Thumbs.db
+
+.vercel
