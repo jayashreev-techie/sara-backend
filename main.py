@@ -28,10 +28,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Static file serving for uploaded photos
-upload_path = Path(settings.UPLOAD_DIR)
-upload_path.mkdir(parents=True, exist_ok=True)
-app.mount("/uploads", StaticFiles(directory=str(upload_path)), name="uploads")
+# Static file serving for uploaded photos (only in non-serverless environments)
+import os
+if os.environ.get("VERCEL") != "1":
+    upload_path = Path(settings.UPLOAD_DIR)
+    upload_path.mkdir(parents=True, exist_ok=True)
+    app.mount("/uploads", StaticFiles(directory=str(upload_path)), name="uploads")
 
 # Routers
 app.include_router(auth_routes.router)
