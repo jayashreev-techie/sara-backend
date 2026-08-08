@@ -1,0 +1,29 @@
+# Environment
+.env
+.env.*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Uploads (user generated files)
+uploads/installation/*
+uploads/recee/*
+!uploads/installation/.gitkeep
+!uploads/recee/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
