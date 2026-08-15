@@ -272,6 +272,7 @@ class CompanyResponse(BaseModel):
     phone: Optional[str] = None
     address: Optional[str] = None
     is_active: bool
+    db_name: Optional[str] = None
     created_at: datetime
 
     class Config:
