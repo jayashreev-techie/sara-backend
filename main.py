@@ -99,3 +99,8 @@ def root():
 @app.get("/health")
 def health():
     return {"status": "ok", "env": settings.APP_ENV}
+
+
+@app.get("/debug/routes")
+def debug_routes():
+    return [{"path": r.path, "methods": list(r.methods)} for r in app.routes if hasattr(r, "methods")]
