@@ -15,7 +15,7 @@ from app.schemas import (
     SuperAdminCreateRequest, SuperAdminResponse,
     CompanyCreateRequest, CompanyUpdateRequest, CompanyResponse,
 )
-from app.tenant import sanitize_db_name, create_tenant_database, provision_tenant_schema
+from app.tenant import sanitize_schema_name, create_tenant_schema, provision_tenant_schema
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -135,22 +135,21 @@ def create_company(
     db.commit()
     db.refresh(company)
 
-    # Step 2: Create a dedicated database for this company
-    db_name = sanitize_db_name(payload.company_name)
-    # Make it unique by appending the company id
-    db_name = f"{db_name}_{company.id}"
+    # Step 2: Create a dedicated schema for this company
+    schema_name = sanitize_schema_name(payload.company_name)
+    schema_name = f"{schema_name}_{company.id}"
     try:
-        db_url = create_tenant_database(db_name)
-        provision_tenant_schema(db_url)
+        create_tenant_schema(schema_name)
+        provision_tenant_schema(schema_name)
     except Exception as e:
-        # Roll back company creation if DB provisioning fails
+        # Roll back company creation if schema provisioning fails
         db.delete(company)
         db.commit()
-        raise HTTPException(status_code=500, detail=f"Failed to provision company database: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to provision company schema: {e}")
 
-    # Step 3: Save db_name and db_url back to company record
-    company.db_name = db_name
-    company.db_url = db_url
+    # Step 3: Save schema name back to company record
+    company.db_name = schema_name
+    company.db_url = None
     db.commit()
     db.refresh(company)
 
