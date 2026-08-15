@@ -9,13 +9,13 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 from datetime import datetime
-from app.database import Base
+from app.database import MasterBase, TenantBase
 
 
 # =========================================================
 # CLIENT (Img 8 - Client Entry Form)
 # =========================================================
-class Client(Base):
+class Client(TenantBase):
     __tablename__ = "clients"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -30,7 +30,7 @@ class Client(Base):
 # =========================================================
 # PRODUCT TYPE (Img 9)
 # =========================================================
-class ProductType(Base):
+class ProductType(TenantBase):
     __tablename__ = "product_types"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -43,7 +43,7 @@ class ProductType(Base):
 # =========================================================
 # CLIENT-PRODUCT LINK (Img 10)
 # =========================================================
-class ClientProductLink(Base):
+class ClientProductLink(TenantBase):
     __tablename__ = "client_product_links"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -54,7 +54,7 @@ class ClientProductLink(Base):
 # =========================================================
 # LOCATION (Img 11)
 # =========================================================
-class Location(Base):
+class Location(TenantBase):
     __tablename__ = "locations"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -65,7 +65,7 @@ class Location(Base):
 # =========================================================
 # STORE (Img 12)
 # =========================================================
-class Store(Base):
+class Store(TenantBase):
     __tablename__ = "stores"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -79,7 +79,7 @@ class Store(Base):
 # =========================================================
 # JOB (Img 14 - Job Creation Entry Form)
 # =========================================================
-class Job(Base):
+class Job(TenantBase):
     __tablename__ = "jobs"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -104,7 +104,7 @@ class Job(Base):
 # JOB PRODUCT (each row in Img 14 "Product #1" section)
 # Adhuthan mobile la "Store 1, Store 2..." aa varum
 # =========================================================
-class JobProduct(Base):
+class JobProduct(TenantBase):
     __tablename__ = "job_products"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -140,7 +140,7 @@ class JobProduct(Base):
 # =========================================================
 # RECEE MEASUREMENT (mobile worker enter panrathu)
 # =========================================================
-class ReceeMeasurement(Base):
+class ReceeMeasurement(TenantBase):
     __tablename__ = "recee_measurements"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -160,7 +160,7 @@ class ReceeMeasurement(Base):
 # INSTALLATION ENTRY (mobile - Img 6 last screen)
 # 3 photo sections: Recee (reference), Design, Installation
 # =========================================================
-class Installation(Base):
+class Installation(TenantBase):
     __tablename__ = "installations"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -181,7 +181,7 @@ class Installation(Base):
 # =========================================================
 # USER (Sara Fabrications web registration — 3-step form)
 # =========================================================
-class User(Base):
+class User(TenantBase):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -200,7 +200,7 @@ class User(Base):
 # =========================================================
 # OTP (transient - clean up after expiry)
 # =========================================================
-class OTPRecord(Base):
+class OTPRecord(TenantBase):
     __tablename__ = "otp_records"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -215,7 +215,7 @@ class OTPRecord(Base):
 # MOBILE APP USER (optional - track mobile users)
 # Login mobile = jobs.measurement_person_mobile
 # =========================================================
-class MobileUser(Base):
+class MobileUser(TenantBase):
     __tablename__ = "mobile_users"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -228,9 +228,21 @@ class MobileUser(Base):
 
 
 # =========================================================
+# SUPER ADMIN (stored in master DB)
+# =========================================================
+class SuperAdmin(MasterBase):
+    __tablename__ = "super_admins"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(255), unique=True, index=True, nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+# =========================================================
 # COMPANY (created by Super Admin)
 # =========================================================
-class Company(Base):
+class Company(MasterBase):
     __tablename__ = "companies"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -241,3 +253,6 @@ class Company(Base):
     address = Column(Text)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    # Tenant database info (set when company is created)
+    db_name = Column(String(255), nullable=True)
+    db_url = Column(Text, nullable=True)

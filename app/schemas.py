@@ -231,6 +231,20 @@ class SuperAdminLoginResponse(BaseModel):
     token_type: str = "bearer"
 
 
+class SuperAdminCreateRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(..., min_length=6)
+
+
+class SuperAdminResponse(BaseModel):
+    id: int
+    email: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 # =====================================================
 # COMPANY (managed by Super Admin)
 # =====================================================
@@ -280,6 +294,77 @@ class CompanyLoginResponse(BaseModel):
     email: str
     access_token: str
     token_type: str = "bearer"
+
+
+# =====================================================
+# JOB UPDATE
+# =====================================================
+class JobUpdateRequest(BaseModel):
+    client_id: Optional[int] = None
+    job_creation_date: Optional[date] = None
+    client_contact_person_name: Optional[str] = None
+    client_contact_person_mobile: Optional[str] = None
+    po_number: Optional[str] = None
+    po_date: Optional[date] = None
+    measurement_date: Optional[date] = None
+    measurement_person_name: Optional[str] = None
+    measurement_person_mobile: Optional[str] = None
+    status: Optional[str] = None
+
+
+class JobProductUpdateRequest(BaseModel):
+    store_id: Optional[int] = None
+    location_id: Optional[int] = None
+    product_type_id: Optional[int] = None
+    total_qty: Optional[int] = None
+    width_inch: Optional[float] = None
+    height_inch: Optional[float] = None
+    is_double_sided: Optional[bool] = None
+    is_pool: Optional[bool] = None
+    remark: Optional[str] = None
+
+
+class JobProductResponse(BaseModel):
+    id: int
+    store_id: Optional[int] = None
+    store_name: Optional[str] = None
+    location_id: Optional[int] = None
+    product_type_id: Optional[int] = None
+    product_type: Optional[str] = None
+    total_qty: int = 1
+    width_inch: float = 0.0
+    height_inch: float = 0.0
+    sq_ft_unit: float = 0.0
+    total_sq_ft: float = 0.0
+    is_double_sided: bool = False
+    is_pool: bool = False
+    remark: Optional[str] = None
+    photo_path: Optional[str] = None
+    recee_status: str = "pending"
+    installation_status: str = "pending"
+
+    class Config:
+        from_attributes = True
+
+
+class JobDetailResponse(BaseModel):
+    id: int
+    job_creation_date: Optional[date] = None
+    client_id: int
+    company_name: Optional[str] = None
+    client_contact_person_name: Optional[str] = None
+    client_contact_person_mobile: Optional[str] = None
+    po_number: Optional[str] = None
+    po_date: Optional[date] = None
+    measurement_date: Optional[date] = None
+    measurement_person_name: Optional[str] = None
+    measurement_person_mobile: Optional[str] = None
+    status: str = "pending"
+    created_at: Optional[datetime] = None
+    products: List[JobProductResponse] = []
+
+    class Config:
+        from_attributes = True
 
 
 # =====================================================

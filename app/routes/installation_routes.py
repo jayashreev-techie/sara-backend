@@ -11,7 +11,7 @@ from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case
-from app.database import get_db
+from app.tenant import get_tenant_db as get_db
 from app.models import (
     Job, JobProduct, Store, Client, ProductType, Installation, MobileUser
 )
