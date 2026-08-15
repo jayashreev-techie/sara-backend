@@ -72,9 +72,12 @@ def provision_tenant_schema(schema_name: str) -> None:
     from app.database import TenantBase
     import app.models  # noqa: F401 — register all models on TenantBase
 
-    schema_engine = _make_engine_with_search_path(schema_name)
+    schema_engine = create_engine(settings.database_url, pool_pre_ping=True)
     try:
-        TenantBase.metadata.create_all(bind=schema_engine)
+        with schema_engine.begin() as conn:
+            # Explicitly set search_path on this connection before create_all
+            conn.execute(text(f'SET search_path TO "{schema_name}", public'))
+            TenantBase.metadata.create_all(bind=conn)
     finally:
         schema_engine.dispose()
 
