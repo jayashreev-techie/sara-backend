@@ -28,11 +28,8 @@ def sanitize_db_name(company_name: str) -> str:
 
 
 def _postgres_admin_url() -> str:
-    """URL pointing to the 'postgres' default database (needed to CREATE DATABASE)."""
-    return (
-        f"postgresql+psycopg2://{settings.DB_USER}:{settings.DB_PASSWORD}"
-        f"@{settings.DB_HOST}:{settings.DB_PORT}/postgres?sslmode={settings.DB_SSLMODE}"
-    )
+    """URL for running CREATE DATABASE — uses the master DB connection (works on Neon)."""
+    return settings.database_url
 
 
 def get_tenant_db_url(db_name: str) -> str:
