@@ -59,6 +59,8 @@ def _get_schema_engine(schema_name: str):
     return _tenant_engines[schema_name]
 
 
+
+
 def create_tenant_schema(schema_name: str) -> None:
     """Create a new PostgreSQL schema for a tenant inside the master database."""
     from app.database import engine
@@ -75,9 +77,9 @@ def provision_tenant_schema(schema_name: str) -> None:
     schema_engine = create_engine(settings.database_url, pool_pre_ping=True)
     try:
         with schema_engine.begin() as conn:
-            # Explicitly set search_path on this connection before create_all
-            conn.execute(text(f'SET search_path TO "{schema_name}", public'))
-            TenantBase.metadata.create_all(bind=conn)
+            # schema_translate_map redirects all unschema'd tables into the tenant schema
+            conn = conn.execution_options(schema_translate_map={None: schema_name})
+            TenantBase.metadata.create_all(conn)
     finally:
         schema_engine.dispose()
 
