@@ -141,17 +141,15 @@ def create_company(
     try:
         create_tenant_schema(schema_name)
         provision_tenant_schema(schema_name)
-    except Exception as e:
-        # Roll back company creation if schema provisioning fails
-        db.delete(company)
+        # Step 3: Save schema name back to company record
+        company.db_name = schema_name
+        company.db_url = None
         db.commit()
-        raise HTTPException(status_code=500, detail=f"Failed to provision company schema: {e}")
-
-    # Step 3: Save schema name back to company record
-    company.db_name = schema_name
-    company.db_url = None
-    db.commit()
-    db.refresh(company)
+        db.refresh(company)
+    except Exception as e:
+        # Keep the company record but expose the real error so we can debug
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Company created (id={company.id}) but schema provisioning failed: {type(e).__name__}: {e}")
 
     return company
 
