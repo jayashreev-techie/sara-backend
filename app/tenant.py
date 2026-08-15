@@ -31,13 +31,27 @@ def sanitize_schema_name(company_name: str) -> str:
 _tenant_engines: dict = {}
 
 
+def _make_engine_with_search_path(schema_name: str, **kwargs):
+    """Create a SQLAlchemy engine that sets search_path on every connection checkout.
+    Using an event listener instead of connect_args so it works with Neon's pgBouncer pooler."""
+    from sqlalchemy import event
+
+    engine = create_engine(settings.database_url, pool_pre_ping=True, **kwargs)
+
+    @event.listens_for(engine, "connect")
+    def _set_search_path(dbapi_conn, _record):
+        cursor = dbapi_conn.cursor()
+        cursor.execute(f"SET search_path TO \"{schema_name}\", public")
+        cursor.close()
+
+    return engine
+
+
 def _get_schema_engine(schema_name: str):
     """Return a cached SQLAlchemy engine with search_path set to the tenant schema."""
     if schema_name not in _tenant_engines:
-        _tenant_engines[schema_name] = create_engine(
-            settings.database_url,
-            connect_args={"options": f"-c search_path={schema_name},public"},
-            pool_pre_ping=True,
+        _tenant_engines[schema_name] = _make_engine_with_search_path(
+            schema_name,
             pool_recycle=3600,
             pool_size=5,
             max_overflow=10,
@@ -58,11 +72,7 @@ def provision_tenant_schema(schema_name: str) -> None:
     from app.database import TenantBase
     import app.models  # noqa: F401 — register all models on TenantBase
 
-    schema_engine = create_engine(
-        settings.database_url,
-        connect_args={"options": f"-c search_path={schema_name},public"},
-        pool_pre_ping=True,
-    )
+    schema_engine = _make_engine_with_search_path(schema_name)
     try:
         TenantBase.metadata.create_all(bind=schema_engine)
     finally:
