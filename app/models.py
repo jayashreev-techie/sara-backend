@@ -256,3 +256,267 @@ class Company(MasterBase):
     # Tenant database info (set when company is created)
     db_name = Column(String(255), nullable=True)
     db_url = Column(Text, nullable=True)
+
+
+# =========================================================
+# SUPPLIER
+# =========================================================
+class Supplier(TenantBase):
+    __tablename__ = "suppliers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    mobile = Column(String(15))
+    gst = Column(String(20))
+    bank_details = Column(String(500))
+    address = Column(Text)
+    is_active = Column(Boolean, default=True)
+    del_flag = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+# =========================================================
+# PRODUCT CATEGORY
+# =========================================================
+class ProductCategory(TenantBase):
+    __tablename__ = "product_categories"
+
+    id = Column(Integer, primary_key=True, index=True)
+    category_name = Column(String(255), nullable=False)
+    is_active = Column(Boolean, default=True)
+    del_flag = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+# =========================================================
+# PRODUCT UNIT
+# =========================================================
+class ProductUnit(TenantBase):
+    __tablename__ = "product_units"
+
+    id = Column(Integer, primary_key=True, index=True)
+    unit = Column(String(50), nullable=False)
+    is_active = Column(Boolean, default=True)
+    del_flag = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+# =========================================================
+# PRODUCT MASTER
+# =========================================================
+class Product(TenantBase):
+    __tablename__ = "products"
+
+    id = Column(Integer, primary_key=True, index=True)
+    category_id = Column(Integer, ForeignKey("product_categories.id"), nullable=True)
+    hsn_number = Column(String(50))
+    product_name = Column(String(255), nullable=False)
+    product_description = Column(Text)
+    product_unit_id = Column(Integer, ForeignKey("product_units.id"), nullable=True)
+    gst = Column(Float, default=0.0)
+    is_active = Column(Boolean, default=True)
+    del_flag = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    category = relationship("ProductCategory")
+    unit = relationship("ProductUnit")
+
+
+# =========================================================
+# INWARD ENTRY (header)
+# =========================================================
+class InwardEntry(TenantBase):
+    __tablename__ = "inward_entries"
+
+    id = Column(Integer, primary_key=True, index=True)
+    inward_code = Column(Integer)
+    inward_date = Column(Date)
+    supplier_id = Column(Integer, ForeignKey("suppliers.id"), nullable=True)
+    bill_file_name = Column(String(255))
+    bill_file_path = Column(String(500))
+    is_active = Column(Boolean, default=True)
+    del_flag = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    supplier = relationship("Supplier")
+    products = relationship("InwardProduct", back_populates="inward_entry", cascade="all, delete")
+
+
+# =========================================================
+# INWARD PRODUCT (line items)
+# =========================================================
+class InwardProduct(TenantBase):
+    __tablename__ = "inward_products"
+
+    id = Column(Integer, primary_key=True, index=True)
+    inward_entry_id = Column(Integer, ForeignKey("inward_entries.id"))
+    inward_code = Column(Integer)
+    inward_date = Column(Date)
+    supplier_id = Column(Integer, ForeignKey("suppliers.id"), nullable=True)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=True)
+    category_id = Column(Integer, ForeignKey("product_categories.id"), nullable=True)
+    unit_id = Column(Integer, ForeignKey("product_units.id"), nullable=True)
+    gst = Column(String(10))
+    qty = Column(Float, default=0.0)
+    per_qty_amt = Column(Float, default=0.0)
+    total_amount = Column(Float, default=0.0)
+    total_gst_amount = Column(Float, default=0.0)
+    is_active = Column(Boolean, default=True)
+    del_flag = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    inward_entry = relationship("InwardEntry", back_populates="products")
+    product = relationship("Product")
+    category = relationship("ProductCategory")
+    unit = relationship("ProductUnit")
+
+
+# =========================================================
+# OUTWARD ENTRY
+# =========================================================
+class OutwardEntry(TenantBase):
+    __tablename__ = "outward_entries"
+
+    id = Column(Integer, primary_key=True, index=True)
+    outward_code = Column(Integer)
+    supplier_id = Column(Integer, ForeignKey("suppliers.id"), nullable=True)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=True)
+    inward_product_id = Column(Integer, ForeignKey("inward_products.id"), nullable=True)
+    act_qty = Column(Float, default=0.0)
+    out_qty = Column(Float, default=0.0)
+    remark = Column(Text)
+    is_active = Column(Boolean, default=True)
+    del_flag = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    supplier = relationship("Supplier")
+    product = relationship("Product")
+    inward_product = relationship("InwardProduct")
+
+
+# =========================================================
+# DESIGNER
+# =========================================================
+class Designer(TenantBase):
+    __tablename__ = "designers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    designer_name = Column(String(255), nullable=False)
+    mobile = Column(String(15))
+    is_active = Column(Boolean, default=True)
+    del_flag = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+# =========================================================
+# PRINTER
+# =========================================================
+class Printer(TenantBase):
+    __tablename__ = "printers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    printer_name = Column(String(255), nullable=False)
+    contact_person_name = Column(String(255))
+    mobile = Column(String(15))
+    address = Column(Text)
+    gst_no = Column(String(20))
+    is_active = Column(Boolean, default=True)
+    del_flag = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+# =========================================================
+# WORK DESIGN (Design → Printing → Fabrication workflow)
+# Links to a Job via job_id
+# =========================================================
+class WorkDesign(TenantBase):
+    __tablename__ = "work_designs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    job_id = Column(Integer, ForeignKey("jobs.id"), nullable=True)
+    design_file_1 = Column(String(255))
+    design_file_1_path = Column(String(500))
+    design_file_2 = Column(String(255))
+    design_file_2_path = Column(String(500))
+    printer_id = Column(Integer, ForeignKey("printers.id"), nullable=True)
+    printing_done = Column(Boolean, default=False)
+    move_to_fabrication = Column(Boolean, default=False)
+    fabrication_done = Column(Boolean, default=False)
+    del_flag = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    job = relationship("Job")
+    printer = relationship("Printer")
+
+
+# =========================================================
+# INVOICE (Finance / Billing)
+# =========================================================
+class Invoice(TenantBase):
+    __tablename__ = "invoices"
+
+    id = Column(Integer, primary_key=True, index=True)
+    invoice_no = Column(String(50), unique=True, index=True)
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=True)
+    invoice_date = Column(Date)
+    buyer_gstin = Column(String(20))
+    company_gstin = Column(String(20))
+    place_of_supply = Column(String(100))
+    subtotal = Column(Float, default=0.0)
+    cgst = Column(Float, default=0.0)
+    sgst = Column(Float, default=0.0)
+    igst = Column(Float, default=0.0)
+    total = Column(Float, default=0.0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    client = relationship("Client")
+    items = relationship("InvoiceItem", back_populates="invoice", cascade="all, delete")
+
+
+# =========================================================
+# INVOICE ITEM (line items)
+# =========================================================
+class InvoiceItem(TenantBase):
+    __tablename__ = "invoice_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    invoice_id = Column(Integer, ForeignKey("invoices.id"))
+    description = Column(String(500))
+    hsn_code = Column(String(20))
+    qty = Column(Float, default=0.0)
+    rate = Column(Float, default=0.0)
+    gst_rate = Column(Float, default=18.0)
+    taxable_value = Column(Float, default=0.0)
+    cgst = Column(Float, default=0.0)
+    sgst = Column(Float, default=0.0)
+    igst = Column(Float, default=0.0)
+    total = Column(Float, default=0.0)
+
+    invoice = relationship("Invoice", back_populates="items")
+
+
+# =========================================================
+# USER ROLE (for company users)
+# =========================================================
+class UserRole(TenantBase):
+    __tablename__ = "user_roles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    role_name = Column(String(100), nullable=False)
+
+
+# =========================================================
+# COMPANY USER (web admin users within a tenant)
+# =========================================================
+class CompanyUser(TenantBase):
+    __tablename__ = "company_users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    email = Column(String(255), unique=True, index=True, nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    role_id = Column(Integer, ForeignKey("user_roles.id"), nullable=True)
+    status = Column(Integer, default=1)  # 0=inactive, 1=active, 2=suspended
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    role = relationship("UserRole")

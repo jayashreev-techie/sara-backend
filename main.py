@@ -12,6 +12,10 @@ from app.routes import (
     auth_routes, recee_routes, installation_routes, job_routes,
     super_admin_routes, company_routes,
     client_routes, location_routes, store_routes, product_type_routes,
+    dashboard_routes,
+    supplier_routes, product_routes, inward_routes, outward_routes,
+    designer_routes, printer_routes, design_routes, invoice_routes,
+    user_management_routes,
 )
 import app.models  # noqa: F401 — ensure all models are registered on their respective bases
 from sqlalchemy import text
@@ -79,6 +83,16 @@ app.include_router(recee_routes.router)
 app.include_router(installation_routes.router)
 app.include_router(super_admin_routes.router)
 app.include_router(company_routes.router)
+app.include_router(dashboard_routes.router)
+app.include_router(supplier_routes.router)
+app.include_router(product_routes.router)
+app.include_router(inward_routes.router)
+app.include_router(outward_routes.router)
+app.include_router(designer_routes.router)
+app.include_router(printer_routes.router)
+app.include_router(design_routes.router)
+app.include_router(invoice_routes.router)
+app.include_router(user_management_routes.router)
 
 
 @app.get("/")
