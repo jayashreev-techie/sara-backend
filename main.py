@@ -40,6 +40,28 @@ with engine.connect() as conn:
             conn.execute(text(f"ALTER TABLE companies ADD COLUMN {col} {col_type}"))
     conn.commit()
 
+# Tenant databases predate the client address field. Add it to every tenant
+# schema, including legacy schemas that no longer have a company master record.
+# New tenant schemas receive it through the Client model automatically.
+with engine.connect() as conn:
+    tenant_schemas = conn.execute(text(
+        "SELECT schema_name FROM information_schema.schemata "
+        "WHERE schema_name LIKE 'tenant_%'"
+    )).scalars()
+    # Older installations kept tenant data in the public schema, so migrate
+    # that legacy clients table as well.
+    for schema_name in ["public", *tenant_schemas]:
+        if (
+            schema_name
+            and schema_name.replace("_", "").isalnum()
+            and schema_name[0].isalpha()
+        ):
+            conn.execute(text(
+                f'ALTER TABLE IF EXISTS "{schema_name}".clients '
+                'ADD COLUMN IF NOT EXISTS address TEXT'
+            ))
+    conn.commit()
+
 # Seed default super admin from .env if none exists in DB
 _MasterSession = sessionmaker(bind=engine)
 with _MasterSession() as session:

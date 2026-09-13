@@ -24,6 +24,7 @@ class Client(TenantBase):
     sales_person_name = Column(String(255))
     mobile = Column(String(15))
     gst_number = Column(String(20))
+    address = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 

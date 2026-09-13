@@ -3,23 +3,32 @@ from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.tenant import get_tenant_db as get_db
-from app.models import Location, Store, Company
+from app.models import Company, JobProduct, Location, Store
 from app.auth import get_current_company
 
 router = APIRouter(prefix="/api/locations", tags=["Locations"])
 
 
-def _to_dict(loc: Location, store_names: Optional[List[str]] = None) -> dict:
+def _to_dict(
+    loc: Location,
+    store_names: Optional[List[str]] = None,
+    store_ids: Optional[List[int]] = None,
+) -> dict:
     return {
         "id": loc.id,
         "location_name": loc.location_name,
         "store_names": store_names or [],
+        "store_ids": store_ids or [],
     }
 
 
 def _enrich(db: Session, loc: Location) -> dict:
     stores = db.query(Store).filter(Store.location_id == loc.id).all()
-    return _to_dict(loc, store_names=[s.store_name for s in stores])
+    return _to_dict(
+        loc,
+        store_names=[store.store_name for store in stores],
+        store_ids=[store.id for store in stores],
+    )
 
 
 # =====================================================
@@ -68,8 +77,17 @@ def create_location(
     if not payload.get("location_name"):
         raise HTTPException(status_code=422, detail="'location_name' is required")
 
+    store = None
+    if payload.get("store_id") is not None:
+        store = db.query(Store).filter(Store.id == payload["store_id"]).first()
+        if not store:
+            raise HTTPException(status_code=404, detail="Store not found")
+
     loc = Location(location_name=payload["location_name"])
     db.add(loc)
+    db.flush()
+    if store:
+        store.location_id = loc.id
     db.commit()
     db.refresh(loc)
     return _enrich(db, loc)
@@ -91,6 +109,13 @@ def update_location(
 
     if "location_name" in payload:
         loc.location_name = payload["location_name"]
+    if "store_id" in payload:
+        if payload["store_id"] is None:
+            raise HTTPException(status_code=422, detail="'store_id' cannot be null")
+        store = db.query(Store).filter(Store.id == payload["store_id"]).first()
+        if not store:
+            raise HTTPException(status_code=404, detail="Store not found")
+        store.location_id = loc.id
 
     db.commit()
     db.refresh(loc)
@@ -109,6 +134,15 @@ def delete_location(
     loc = db.query(Location).filter(Location.id == location_id).first()
     if not loc:
         raise HTTPException(status_code=404, detail="Location not found")
+
+    has_store = db.query(Store.id).filter(Store.location_id == location_id).first()
+    has_job_product = db.query(JobProduct.id).filter(JobProduct.location_id == location_id).first()
+    if has_store or has_job_product:
+        raise HTTPException(
+            status_code=409,
+            detail="This location is linked to stores or job products, so it cannot be deleted",
+        )
+
     db.delete(loc)
     db.commit()
     return {"success": True, "message": "Deleted"}
