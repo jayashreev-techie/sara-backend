@@ -78,10 +78,15 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# CORS — allow Flutter app
+# CORS — browser clients must be listed explicitly when credentials are enabled.
+# Native Flutter Android/iOS clients are not affected by CORS.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Production la specific domains restrict pannunga
+    allow_origins=[
+        "https://sara-fabrications-app.vercel.app",
+        "http://localhost:3000",
+        "http://localhost:5173",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -29,3 +29,4 @@ uploads/recee/*
 Thumbs.db
 
 .vercel
+.env*
