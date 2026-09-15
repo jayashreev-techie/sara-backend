@@ -84,8 +84,14 @@ class Job(TenantBase):
     __tablename__ = "jobs"
 
     id = Column(Integer, primary_key=True, index=True)
+    # Job-order fields used by the web application.  The older PO/measurement
+    # fields are retained below so existing mobile workflows keep working.
+    job_number = Column(String(100), nullable=True, index=True)
     job_creation_date = Column(Date)
     client_id = Column(Integer, ForeignKey("clients.id"))
+    store_id = Column(Integer, ForeignKey("stores.id"), nullable=True)
+    due_date = Column(Date, nullable=True)
+    remarks = Column(Text, nullable=True)
     client_contact_person_name = Column(String(255))
     client_contact_person_mobile = Column(String(15))
     po_number = Column(String(100))
@@ -98,6 +104,7 @@ class Job(TenantBase):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     client = relationship("Client", backref="jobs")
+    store = relationship("Store", foreign_keys=[store_id])
     products = relationship("JobProduct", back_populates="job", cascade="all, delete")
 
 

@@ -1,7 +1,7 @@
 """Pydantic schemas for request/response validation"""
 from pydantic import BaseModel, Field, EmailStr
 from datetime import datetime, date
-from typing import Optional, List
+from typing import Literal, Optional, List
 
 
 # =====================================================
@@ -170,10 +170,10 @@ class InstallationSubmitResponse(BaseModel):
 # JOB CREATION (admin/web side — Img 14 Job Creation Form)
 # =====================================================
 class JobProductCreateItem(BaseModel):
-    store_id: int
+    store_id: Optional[int] = None
     location_id: Optional[int] = None
-    product_type_id: Optional[int] = None
-    total_qty: int = 1
+    product_type_id: int
+    total_qty: int = Field(1, ge=1)
     width_inch: float = 0.0
     height_inch: float = 0.0
     is_double_sided: bool = False
@@ -183,15 +183,22 @@ class JobProductCreateItem(BaseModel):
 
 class JobCreateRequest(BaseModel):
     client_id: int
-    job_creation_date: Optional[date] = None  # default: today
+    store_id: int
+    job_number: Optional[str] = Field(None, max_length=100)
+    job_date: Optional[date] = None
+    # Retained as an input alias for existing API consumers.
+    job_creation_date: Optional[date] = None
+    due_date: Optional[date] = None
+    remarks: Optional[str] = None
     client_contact_person_name: Optional[str] = None
     client_contact_person_mobile: Optional[str] = None
     po_number: Optional[str] = None
     po_date: Optional[date] = None
     measurement_date: Optional[date] = None
     measurement_person_name: Optional[str] = None
-    measurement_person_mobile: str = Field(..., min_length=10, max_length=15)
-    products: List[JobProductCreateItem] = []
+    measurement_person_mobile: Optional[str] = Field(None, min_length=10, max_length=15)
+    status: Literal["draft", "pending", "in_progress", "completed", "cancelled"] = "pending"
+    products: List[JobProductCreateItem] = Field(..., min_length=1)
 
 
 class JobCreateResponse(BaseModel):
@@ -203,14 +210,14 @@ class JobCreateResponse(BaseModel):
 
 class JobListItem(BaseModel):
     id: int
-    job_creation_date: Optional[date] = None
+    job_number: str
     client_id: int
-    company_name: Optional[str] = None
-    po_number: Optional[str] = None
-    measurement_person_name: Optional[str] = None
-    measurement_person_mobile: Optional[str] = None
-    status: Optional[str] = None
-    product_count: int = 0
+    client_name: Optional[str] = None
+    store_id: Optional[int] = None
+    store_name: Optional[str] = None
+    status: str
+    created_at: Optional[datetime] = None
+    total_products: int = 0
 
     class Config:
         from_attributes = True
@@ -302,7 +309,12 @@ class CompanyLoginResponse(BaseModel):
 # =====================================================
 class JobUpdateRequest(BaseModel):
     client_id: Optional[int] = None
+    store_id: Optional[int] = None
+    job_number: Optional[str] = Field(None, max_length=100)
+    job_date: Optional[date] = None
     job_creation_date: Optional[date] = None
+    due_date: Optional[date] = None
+    remarks: Optional[str] = None
     client_contact_person_name: Optional[str] = None
     client_contact_person_mobile: Optional[str] = None
     po_number: Optional[str] = None
@@ -310,14 +322,18 @@ class JobUpdateRequest(BaseModel):
     measurement_date: Optional[date] = None
     measurement_person_name: Optional[str] = None
     measurement_person_mobile: Optional[str] = None
-    status: Optional[str] = None
+    status: Optional[Literal["draft", "pending", "in_progress", "completed", "cancelled"]] = None
+
+
+class JobStatusUpdateRequest(BaseModel):
+    status: Literal["draft", "pending", "in_progress", "completed", "cancelled"]
 
 
 class JobProductUpdateRequest(BaseModel):
     store_id: Optional[int] = None
     location_id: Optional[int] = None
     product_type_id: Optional[int] = None
-    total_qty: Optional[int] = None
+    total_qty: Optional[int] = Field(None, ge=1)
     width_inch: Optional[float] = None
     height_inch: Optional[float] = None
     is_double_sided: Optional[bool] = None
@@ -341,8 +357,11 @@ class JobProductResponse(BaseModel):
     is_pool: bool = False
     remark: Optional[str] = None
     photo_path: Optional[str] = None
+    photo_url: Optional[str] = None
     recee_status: str = "pending"
     installation_status: str = "pending"
+    recee: Optional[dict] = None
+    installation: Optional[dict] = None
 
     class Config:
         from_attributes = True
@@ -350,9 +369,16 @@ class JobProductResponse(BaseModel):
 
 class JobDetailResponse(BaseModel):
     id: int
+    job_number: str
+    job_date: Optional[date] = None
     job_creation_date: Optional[date] = None
     client_id: int
+    client_name: Optional[str] = None
     company_name: Optional[str] = None
+    store_id: Optional[int] = None
+    store_name: Optional[str] = None
+    due_date: Optional[date] = None
+    remarks: Optional[str] = None
     client_contact_person_name: Optional[str] = None
     client_contact_person_mobile: Optional[str] = None
     po_number: Optional[str] = None
@@ -362,7 +388,9 @@ class JobDetailResponse(BaseModel):
     measurement_person_mobile: Optional[str] = None
     status: str = "pending"
     created_at: Optional[datetime] = None
-    products: List[JobProductResponse] = []
+    total_products: int = 0
+    products: List[JobProductResponse] = Field(default_factory=list)
+    gallery: List[dict] = Field(default_factory=list)
 
     class Config:
         from_attributes = True

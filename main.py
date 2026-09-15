@@ -40,9 +40,9 @@ with engine.connect() as conn:
             conn.execute(text(f"ALTER TABLE companies ADD COLUMN {col} {col_type}"))
     conn.commit()
 
-# Tenant databases predate the client address field. Add it to every tenant
+# Tenant databases predate some application fields. Add them to every tenant
 # schema, including legacy schemas that no longer have a company master record.
-# New tenant schemas receive it through the Client model automatically.
+# New tenant schemas receive them through the SQLAlchemy models automatically.
 with engine.connect() as conn:
     tenant_schemas = conn.execute(text(
         "SELECT schema_name FROM information_schema.schemata "
@@ -60,6 +60,16 @@ with engine.connect() as conn:
                 f'ALTER TABLE IF EXISTS "{schema_name}".clients '
                 'ADD COLUMN IF NOT EXISTS address TEXT'
             ))
+            for column, column_type in [
+                ("job_number", "VARCHAR(100)"),
+                ("store_id", "INTEGER"),
+                ("due_date", "DATE"),
+                ("remarks", "TEXT"),
+            ]:
+                conn.execute(text(
+                    f'ALTER TABLE IF EXISTS "{schema_name}".jobs '
+                    f'ADD COLUMN IF NOT EXISTS {column} {column_type}'
+                ))
     conn.commit()
 
 # Seed default super admin from .env if none exists in DB
@@ -106,6 +116,7 @@ app.include_router(location_routes.router)
 app.include_router(store_routes.router)
 app.include_router(product_type_routes.router)
 app.include_router(job_routes.router)
+app.include_router(job_routes.job_product_router)
 app.include_router(recee_routes.router)
 app.include_router(installation_routes.router)
 app.include_router(super_admin_routes.router)
