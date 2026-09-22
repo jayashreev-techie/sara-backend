@@ -15,7 +15,7 @@ from app.routes import (
     dashboard_routes,
     supplier_routes, product_routes, inward_routes, outward_routes,
     designer_routes, printer_routes, design_routes, invoice_routes,
-    user_management_routes,
+    user_management_routes, geo_routes,
 )
 import app.models  # noqa: F401 — ensure all models are registered on their respective bases
 from sqlalchemy import text
@@ -56,11 +56,25 @@ with engine.connect() as conn:
             and schema_name.replace("_", "").isalnum()
             and schema_name[0].isalpha()
         ):
-            conn.execute(text(
-                f'ALTER TABLE IF EXISTS "{schema_name}".clients '
-                'ADD COLUMN IF NOT EXISTS address TEXT'
-            ))
+            for col, col_type in [
+                ("address", "TEXT"),
+                ("company_employer", "VARCHAR(255)"),
+                ("email_id", "VARCHAR(255)"),
+                ("address_line1", "VARCHAR(500)"),
+                ("address_line2", "VARCHAR(500)"),
+                ("country", "VARCHAR(100)"),
+                ("state", "VARCHAR(100)"),
+                ("district", "VARCHAR(100)"),
+                ("pincode", "VARCHAR(10)"),
+                ("pan_no", "VARCHAR(20)"),
+                ("website_link", "VARCHAR(500)"),
+            ]:
+                conn.execute(text(
+                    f'ALTER TABLE IF EXISTS "{schema_name}".clients '
+                    f'ADD COLUMN IF NOT EXISTS {col} {col_type}'
+                ))
             for column, column_type in [
+                ("job_order_id", "VARCHAR(150)"),
                 ("job_number", "VARCHAR(100)"),
                 ("store_id", "INTEGER"),
                 ("due_date", "DATE"),
@@ -70,6 +84,31 @@ with engine.connect() as conn:
                     f'ALTER TABLE IF EXISTS "{schema_name}".jobs '
                     f'ADD COLUMN IF NOT EXISTS {column} {column_type}'
                 ))
+            for col, col_type in [
+                ("address_line1", "VARCHAR(500)"),
+                ("address_line2", "VARCHAR(500)"),
+                ("country", "VARCHAR(100)"),
+                ("state", "VARCHAR(100)"),
+                ("district", "VARCHAR(100)"),
+                ("pincode", "VARCHAR(10)"),
+                ("gst_no", "VARCHAR(20)"),
+                ("pan_no", "VARCHAR(20)"),
+                ("website_link", "VARCHAR(500)"),
+            ]:
+                conn.execute(text(
+                    f'ALTER TABLE IF EXISTS "{schema_name}".stores '
+                    f'ADD COLUMN IF NOT EXISTS {col} {col_type}'
+                ))
+            conn.execute(text(
+                f'CREATE TABLE IF NOT EXISTS "{schema_name}".product_photos ('
+                'id SERIAL PRIMARY KEY, '
+                'product_id INTEGER NOT NULL REFERENCES '
+                f'"{schema_name}".job_products(id), '
+                'file_path VARCHAR(500) NOT NULL, '
+                'original_name VARCHAR(255), '
+                'created_at TIMESTAMP DEFAULT NOW()'
+                ')'
+            ))
     conn.commit()
 
 # Seed default super admin from .env if none exists in DB
@@ -131,6 +170,7 @@ app.include_router(printer_routes.router)
 app.include_router(design_routes.router)
 app.include_router(invoice_routes.router)
 app.include_router(user_management_routes.router)
+app.include_router(geo_routes.router)
 
 
 @app.get("/")

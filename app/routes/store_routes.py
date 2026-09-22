@@ -36,6 +36,15 @@ def _to_dict(s: Store, location_name: Optional[str] = None, client_name: Optiona
         "location_name": location_name,
         "address": s.store_address,
         "mobile": s.store_mobile,
+        "address_line1": s.address_line1,
+        "address_line2": s.address_line2,
+        "country": s.country,
+        "state": s.state,
+        "district": s.district,
+        "pincode": s.pincode,
+        "gst_no": s.gst_no,
+        "pan_no": s.pan_no,
+        "website_link": s.website_link,
         "is_active": True,
     }
 
@@ -132,6 +141,15 @@ def create_store(
         location_id=payload.get("location_id"),
         store_address=payload.get("address"),
         store_mobile=mobile,
+        address_line1=payload.get("address_line1"),
+        address_line2=payload.get("address_line2"),
+        country=payload.get("country"),
+        state=payload.get("state"),
+        district=payload.get("district"),
+        pincode=payload.get("pincode"),
+        gst_no=payload.get("gst_no"),
+        pan_no=payload.get("pan_no"),
+        website_link=payload.get("website_link"),
     )
     db.add(store)
     db.commit()
@@ -167,6 +185,12 @@ def update_store(
         if not db.query(Client).filter(Client.id == payload["client_id"]).first():
             raise HTTPException(status_code=404, detail="Client not found")
         store.client_id = payload["client_id"]
+    for field in (
+        "address_line1", "address_line2", "country", "state",
+        "district", "pincode", "gst_no", "pan_no", "website_link",
+    ):
+        if field in payload:
+            setattr(store, field, payload[field])
 
     db.commit()
     db.refresh(store)

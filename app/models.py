@@ -25,6 +25,16 @@ class Client(TenantBase):
     mobile = Column(String(15))
     gst_number = Column(String(20))
     address = Column(Text)
+    company_employer = Column(String(255))
+    email_id = Column(String(255))
+    address_line1 = Column(String(500))
+    address_line2 = Column(String(500))
+    country = Column(String(100))
+    state = Column(String(100))
+    district = Column(String(100))
+    pincode = Column(String(10))
+    pan_no = Column(String(20))
+    website_link = Column(String(500))
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -75,6 +85,15 @@ class Store(TenantBase):
     store_mobile = Column(String(15))
     location_id = Column(Integer, ForeignKey("locations.id"))
     client_id = Column(Integer, ForeignKey("clients.id"))
+    address_line1 = Column(String(500))
+    address_line2 = Column(String(500))
+    country = Column(String(100))
+    state = Column(String(100))
+    district = Column(String(100))
+    pincode = Column(String(10))
+    gst_no = Column(String(20))
+    pan_no = Column(String(20))
+    website_link = Column(String(500))
 
 
 # =========================================================
@@ -84,6 +103,8 @@ class Job(TenantBase):
     __tablename__ = "jobs"
 
     id = Column(Integer, primary_key=True, index=True)
+    # Auto-generated: companyname001, companyname002, ...
+    job_order_id = Column(String(150), nullable=True, unique=True, index=True)
     # Job-order fields used by the web application.  The older PO/measurement
     # fields are retained below so existing mobile workflows keep working.
     job_number = Column(String(100), nullable=True, index=True)
@@ -143,6 +164,22 @@ class JobProduct(TenantBase):
     job = relationship("Job", back_populates="products")
     store = relationship("Store")
     product_type = relationship("ProductType")
+    photos = relationship("ProductPhoto", back_populates="product", cascade="all, delete")
+
+
+# =========================================================
+# PRODUCT PHOTOS (multiple photos per job product)
+# =========================================================
+class ProductPhoto(TenantBase):
+    __tablename__ = "product_photos"
+
+    id = Column(Integer, primary_key=True, index=True)
+    product_id = Column(Integer, ForeignKey("job_products.id"), nullable=False, index=True)
+    file_path = Column(String(500), nullable=False)
+    original_name = Column(String(255))
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    product = relationship("JobProduct", back_populates="photos")
 
 
 # =========================================================
@@ -528,3 +565,42 @@ class CompanyUser(TenantBase):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     role = relationship("UserRole")
+
+
+# =========================================================
+# COUNTRY (Master — shared reference data)
+# =========================================================
+class Country(MasterBase):
+    __tablename__ = "countries"
+
+    id = Column(Integer, primary_key=True, index=True)
+    country_name = Column(String(255), nullable=False, unique=True)
+
+    states = relationship("State", back_populates="country")
+
+
+# =========================================================
+# STATE (Master — shared reference data)
+# =========================================================
+class State(MasterBase):
+    __tablename__ = "states"
+
+    id = Column(Integer, primary_key=True, index=True)
+    state_name = Column(String(255), nullable=False)
+    country_id = Column(Integer, ForeignKey("countries.id"), nullable=False)
+
+    country = relationship("Country", back_populates="states")
+    districts = relationship("District", back_populates="state")
+
+
+# =========================================================
+# DISTRICT (Master — shared reference data)
+# =========================================================
+class District(MasterBase):
+    __tablename__ = "districts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    district_name = Column(String(255), nullable=False)
+    state_id = Column(Integer, ForeignKey("states.id"), nullable=False)
+
+    state = relationship("State", back_populates="districts")

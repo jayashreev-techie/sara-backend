@@ -210,6 +210,7 @@ class JobCreateResponse(BaseModel):
 
 class JobListItem(BaseModel):
     id: int
+    job_order_id: Optional[str] = None
     job_number: str
     client_id: int
     client_name: Optional[str] = None
@@ -369,6 +370,7 @@ class JobProductResponse(BaseModel):
 
 class JobDetailResponse(BaseModel):
     id: int
+    job_order_id: Optional[str] = None
     job_number: str
     job_date: Optional[date] = None
     job_creation_date: Optional[date] = None

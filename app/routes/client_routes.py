@@ -35,6 +35,16 @@ def _to_dict(c: Client) -> dict:
         # Keep the original response field names for existing clients.
         "contact_person_name": c.contact_person_name,
         "sales_person_name": c.sales_person_name,
+        "company_employer": c.company_employer,
+        "email_id": c.email_id,
+        "address_line1": c.address_line1,
+        "address_line2": c.address_line2,
+        "country": c.country,
+        "state": c.state,
+        "district": c.district,
+        "pincode": c.pincode,
+        "pan_no": c.pan_no,
+        "website_link": c.website_link,
         "is_active": True,
     }
 
@@ -118,6 +128,16 @@ def create_client(
         mobile=mobile,
         gst_number=payload.get("gst_no"),
         address=payload.get("address"),
+        company_employer=payload.get("company_employer"),
+        email_id=payload.get("email_id"),
+        address_line1=payload.get("address_line1"),
+        address_line2=payload.get("address_line2"),
+        country=payload.get("country"),
+        state=payload.get("state"),
+        district=payload.get("district"),
+        pincode=payload.get("pincode"),
+        pan_no=payload.get("pan_no"),
+        website_link=payload.get("website_link"),
     )
     db.add(client)
     db.commit()
@@ -155,6 +175,12 @@ def update_client(
         client.gst_number = payload["gst_no"]
     if "address" in payload:
         client.address = payload["address"]
+    for field in (
+        "company_employer", "email_id", "address_line1", "address_line2",
+        "country", "state", "district", "pincode", "pan_no", "website_link",
+    ):
+        if field in payload:
+            setattr(client, field, payload[field])
 
     db.commit()
     db.refresh(client)

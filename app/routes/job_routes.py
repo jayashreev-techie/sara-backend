@@ -1,9 +1,11 @@
 """Job-order APIs for the admin/web application."""
+import re
 from datetime import date
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy import func, or_
+from typing import List as TypingList
 from sqlalchemy.orm import Session, aliased
 
 from app.auth import get_current_company
@@ -15,6 +17,7 @@ from app.models import (
     Job,
     JobProduct,
     Location,
+    ProductPhoto,
     ProductType,
     ReceeMeasurement,
     Store,
@@ -38,6 +41,33 @@ job_product_router = APIRouter(prefix="/api/job-products", tags=["Job Products (
 
 def _calc_sqft(width: float, height: float) -> float:
     return round((width * height) / 144, 4)
+
+
+def _generate_job_order_id(db: Session, client_id: int) -> str:
+    """Auto-generate job_order_id like orientbell001, orientbell002..."""
+    client = db.query(Client).filter(Client.id == client_id).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+
+    # Build prefix: lowercase, remove spaces and special chars
+    prefix = re.sub(r"[^a-z0-9]", "", client.company_name.lower())
+
+    # Find the last job_order_id with this prefix
+    last_job = (
+        db.query(Job.job_order_id)
+        .filter(Job.job_order_id.ilike(f"{prefix}%"))
+        .order_by(Job.job_order_id.desc())
+        .first()
+    )
+
+    if last_job and last_job[0]:
+        # Extract trailing number from e.g. "orientbell005"
+        match = re.search(r"(\d+)$", last_job[0])
+        next_num = int(match.group(1)) + 1 if match else 1
+    else:
+        next_num = 1
+
+    return f"{prefix}{next_num:03d}"
 
 
 def _job_number(job: Job) -> str:
@@ -339,7 +369,10 @@ def create_job(
     if payload.job_number and db.query(Job.id).filter(Job.job_number == payload.job_number.strip()).first():
         raise HTTPException(status_code=409, detail="job_number already exists")
 
+    job_order_id = _generate_job_order_id(db, payload.client_id)
+
     job = Job(
+        job_order_id=job_order_id,
         job_creation_date=payload.job_date or payload.job_creation_date or date.today(),
         client_id=payload.client_id,
         store_id=payload.store_id,
@@ -401,6 +434,7 @@ def list_jobs(
         term = f"%{search.strip()}%"
         query = query.filter(
             or_(
+                Job.job_order_id.ilike(term),
                 Job.job_number.ilike(term),
                 Job.po_number.ilike(term),
                 Client.company_name.ilike(term),
@@ -418,6 +452,7 @@ def list_jobs(
             store_name = store.store_name if store else None
         items.append({
             "id": job.id,
+            "job_order_id": job.job_order_id,
             "job_number": _job_number(job),
             "client_id": job.client_id,
             "client_name": client_name,
@@ -450,6 +485,7 @@ def get_job(
     recee_by_product, installation_by_product = _latest_records_by_product(db, job_id)
     return JobDetailResponse(
         id=job.id,
+        job_order_id=job.job_order_id,
         job_number=_job_number(job),
         job_date=job.job_creation_date,
         job_creation_date=job.job_creation_date,
@@ -736,3 +772,94 @@ def delete_job_product(
     db.delete(product)
     db.commit()
     return {"success": True, "message": "Job product deleted successfully"}
+
+
+# =====================================================
+# PRODUCT PHOTOS — multiple photos per job product
+# =====================================================
+
+def _photo_dict(photo: ProductPhoto) -> dict:
+    return {
+        "id": photo.id,
+        "file_path": build_photo_url(photo.file_path),
+        "original_name": photo.original_name,
+        "created_at": photo.created_at,
+    }
+
+
+@router.post("/{job_id}/products/{product_id}/photos", status_code=201)
+async def upload_product_photos(
+    job_id: int,
+    product_id: int,
+    photos: TypingList[UploadFile] = File(...),
+    db: Session = Depends(get_db),
+    _: Company = Depends(get_current_company),
+):
+    product = db.query(JobProduct).filter(
+        JobProduct.id == product_id, JobProduct.job_id == job_id
+    ).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Job product not found")
+
+    saved = []
+    for photo in photos:
+        path = await save_upload(photo, subfolder=f"product_photos/{product_id}")
+        record = ProductPhoto(
+            product_id=product_id,
+            file_path=path,
+            original_name=photo.filename,
+        )
+        db.add(record)
+        saved.append(record)
+
+    db.commit()
+    for record in saved:
+        db.refresh(record)
+    return [_photo_dict(record) for record in saved]
+
+
+@router.get("/{job_id}/products/{product_id}/photos")
+def list_product_photos(
+    job_id: int,
+    product_id: int,
+    db: Session = Depends(get_db),
+    _: Company = Depends(get_current_company),
+):
+    product = db.query(JobProduct).filter(
+        JobProduct.id == product_id, JobProduct.job_id == job_id
+    ).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Job product not found")
+
+    photos = (
+        db.query(ProductPhoto)
+        .filter(ProductPhoto.product_id == product_id)
+        .order_by(ProductPhoto.id)
+        .all()
+    )
+    return [_photo_dict(p) for p in photos]
+
+
+@router.delete("/{job_id}/products/{product_id}/photos/{photo_id}")
+def delete_product_photo(
+    job_id: int,
+    product_id: int,
+    photo_id: int,
+    db: Session = Depends(get_db),
+    _: Company = Depends(get_current_company),
+):
+    product = db.query(JobProduct).filter(
+        JobProduct.id == product_id, JobProduct.job_id == job_id
+    ).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Job product not found")
+
+    photo = db.query(ProductPhoto).filter(
+        ProductPhoto.id == photo_id, ProductPhoto.product_id == product_id
+    ).first()
+    if not photo:
+        raise HTTPException(status_code=404, detail="Photo not found")
+
+    db.delete(photo)
+    db.commit()
+    return {"success": True, "message": "Photo deleted successfully"}
