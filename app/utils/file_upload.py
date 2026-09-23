@@ -7,7 +7,6 @@ from fastapi import UploadFile, HTTPException
 from app.config import settings
 
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
-MAX_SIZE_BYTES = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
 
 
 async def save_upload(file: UploadFile, subfolder: str) -> str:
@@ -25,13 +24,7 @@ async def save_upload(file: UploadFile, subfolder: str) -> str:
             detail=f"Invalid file type. Allowed: {', '.join(ALLOWED_EXTENSIONS)}",
         )
 
-    # Read content and validate size
     content = await file.read()
-    if len(content) > MAX_SIZE_BYTES:
-        raise HTTPException(
-            status_code=413,
-            detail=f"File too large. Max {settings.MAX_UPLOAD_SIZE_MB}MB",
-        )
 
     # Build path: uploads/<subfolder>/YYYY-MM-DD/<uuid>.<ext>
     date_folder = datetime.now().strftime("%Y-%m-%d")
