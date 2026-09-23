@@ -99,16 +99,22 @@ with engine.connect() as conn:
                     f'ALTER TABLE IF EXISTS "{schema_name}".stores '
                     f'ADD COLUMN IF NOT EXISTS {col} {col_type}'
                 ))
-            conn.execute(text(
-                f'CREATE TABLE IF NOT EXISTS "{schema_name}".product_photos ('
-                'id SERIAL PRIMARY KEY, '
-                'product_id INTEGER NOT NULL REFERENCES '
-                f'"{schema_name}".job_products(id), '
-                'file_path VARCHAR(500) NOT NULL, '
-                'original_name VARCHAR(255), '
-                'created_at TIMESTAMP DEFAULT NOW()'
-                ')'
-            ))
+            # Only create product_photos if job_products table exists in this schema
+            has_job_products = conn.execute(text(
+                "SELECT 1 FROM information_schema.tables "
+                "WHERE table_schema = :schema AND table_name = 'job_products'"
+            ), {"schema": schema_name}).first()
+            if has_job_products:
+                conn.execute(text(
+                    f'CREATE TABLE IF NOT EXISTS "{schema_name}".product_photos ('
+                    'id SERIAL PRIMARY KEY, '
+                    'product_id INTEGER NOT NULL REFERENCES '
+                    f'"{schema_name}".job_products(id), '
+                    'file_path VARCHAR(500) NOT NULL, '
+                    'original_name VARCHAR(255), '
+                    'created_at TIMESTAMP DEFAULT NOW()'
+                    ')'
+                ))
     conn.commit()
 
 # Seed default super admin from .env if none exists in DB
